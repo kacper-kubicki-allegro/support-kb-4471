@@ -61,11 +61,12 @@ or a daylight-saving offset. It needs its own investigation.
   twice. Each id is counted once.
 - **The tenant decides, not the intake tag.** Intake tags a report from the reporter's browser.
   The cause depends on the tenant's locale and booking form (`causes.ts`, `locales.ts`).
-- **A one-day move is its own problem.** The desk already read these apart (`desk-notes.json`);
-  the incident table still counts them under `parser` and footnotes them. Here they get their
-  own row. Each report body was checked: every other report names a swapped day and month, or
-  is consistent with one.
-- **Every report is in exactly one problem.** The table checks the sum against the ticket.
+- **Counted as the desk counts.** Every report is counted once, where its tenant files it,
+  exactly as the #4471 table counts it. The table checks that sum against the ticket.
+- **A one-day move is its own problem.** The desk already read these apart (`desk-notes.json`).
+  They stay counted where their tenant files them, as the #4471 footnote says, and they also
+  get their own row and their own ticket. Each report body was checked: every other report
+  names a swapped day and month, or is consistent with one.
 - The numbers come from the data at render time (`problems.ts`, `ProblemTable.svelte`), so they
   stay right when the desk merges more reports.
 

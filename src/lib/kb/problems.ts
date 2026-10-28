@@ -1,17 +1,12 @@
 // What one big ticket really holds, problem by problem. Pages explain it; this file is what runs.
 //
-// causes.ts tells `parser` from `hint` by the tenant: where they are and which booking form they run.
-// It cannot tell a flip from a one-day move: both come from day-first tenants. The desk reads those
-// apart (desk-notes.json). A day/month flip never moves a date by exactly one day, so a one-day move
-// is a problem of its own, whatever the tenant.
-import { causeOf, uniqueById, type Report, type Tenant } from '#lib/kb/causes';
+// Counted the way the desk counts (CauseTable): every report once, where its tenant files it
+// (`parser` or `hint`, causes.ts). The desk reads some reports as a one-day move (desk-notes.json).
+// A day/month flip never moves a date by exactly one day, so that is a problem of its own with its
+// own ticket; its reports stay counted where their tenant files them, as the desk counts them.
+import { causeOf, uniqueById, type Cause, type Report, type Tenant } from '#lib/kb/causes';
 
-export type Problem = 'parser' | 'hint' | 'one-day' | 'unplaced';
-
-export function problemOf(r: Report, t: Tenant | undefined, oneDayMove: readonly string[]): Problem {
-  if (oneDayMove.includes(r.id)) return 'one-day';
-  return causeOf(r, t) ?? 'unplaced';
-}
+export type Problem = Cause | 'one-day' | 'unplaced';
 
 export type ProblemGroup = {
   problem: Problem;
@@ -21,6 +16,8 @@ export type ProblemGroup = {
   channels: Record<string, number>;
   firstSeen: string;
   lastSeen: string;
+  // For a problem read on top of the tenant's cause: where those reports are filed, cause → count.
+  filedUnder: Partial<Record<Cause | 'unplaced', number>>;
 };
 
 export type TicketSplit = {
@@ -28,11 +25,27 @@ export type TicketSplit = {
   rows: number;
   // Unique reports merged into the ticket.
   merged: Report[];
-  groups: ProblemGroup[];
+  // One group per cause by tenant: every merged report in exactly one of them.
+  filed: ProblemGroup[];
+  // Problems the desk read on top of the cause, counted again here.
+  read: ProblemGroup[];
 };
 
 const count = (rs: Report[], key: (r: Report) => string) =>
   rs.reduce<Record<string, number>>((n, r) => ({ ...n, [key(r)]: (n[key(r)] ?? 0) + 1 }), {});
+
+function group(problem: Problem, rs: Report[], filedUnder: ProblemGroup['filedUnder'] = {}): ProblemGroup {
+  const days = rs.map((r) => r.receivedAt.slice(0, 10)).sort();
+  return {
+    problem,
+    reports: rs,
+    tenants: [...new Set(rs.map((r) => r.tenant))].sort(),
+    channels: count(rs, (r) => r.channel),
+    firstSeen: days[0],
+    lastSeen: days[days.length - 1],
+    filedUnder,
+  };
+}
 
 export function splitTicket(
   exported: Report[],
@@ -41,23 +54,11 @@ export function splitTicket(
   oneDayMove: readonly string[],
 ): TicketSplit {
   const merged = uniqueById(exported).filter((r) => r.mergedInto === ticket);
-  const byProblem = new Map<Problem, Report[]>();
-  for (const r of merged) {
-    const p = problemOf(r, tenantOf(r), oneDayMove);
-    byProblem.set(p, [...(byProblem.get(p) ?? []), r]);
-  }
-  const groups = [...byProblem.entries()]
-    .map(([problem, rs]) => {
-      const days = rs.map((r) => r.receivedAt.slice(0, 10)).sort();
-      return {
-        problem,
-        reports: rs,
-        tenants: [...new Set(rs.map((r) => r.tenant))].sort(),
-        channels: count(rs, (r) => r.channel),
-        firstSeen: days[0],
-        lastSeen: days[days.length - 1],
-      };
-    })
-    .sort((a, b) => b.reports.length - a.reports.length);
-  return { rows: exported.filter((r) => r.mergedInto === ticket).length, merged, groups };
+  const filedAs = (r: Report) => causeOf(r, tenantOf(r)) ?? 'unplaced';
+  const byCause = new Map<Cause | 'unplaced', Report[]>();
+  for (const r of merged) byCause.set(filedAs(r), [...(byCause.get(filedAs(r)) ?? []), r]);
+  const filed = [...byCause.entries()].map(([c, rs]) => group(c, rs)).sort((a, b) => b.reports.length - a.reports.length);
+  const moved = merged.filter((r) => oneDayMove.includes(r.id));
+  const read = moved.length ? [group('one-day', moved, count(moved, filedAs))] : [];
+  return { rows: exported.filter((r) => r.mergedInto === ticket).length, merged, filed, read };
 }
