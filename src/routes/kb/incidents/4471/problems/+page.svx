@@ -13,12 +13,13 @@ signature: 'Kacper Kubicki'
   import RenderStamp from '#lib/kb/RenderStamp.svelte';
 </script>
 
-[#4471](/kb/incidents/4471) says: known, one issue, one fix queued. Its reports say three
-problems, with three different fixes. Each problem now has its own ticket.
+[#4471](/kb/incidents/4471) said: known, one issue, one fix queued. Its reports say three
+problems, with three different fixes. Each problem has its own ticket. Engineering closed #4471
+on 5 October. That closed two of the three problems, not all of them.
 
 <Callout kind="warn">
-The queued parser fix closes only the first problem. Reports for the other two will keep coming
-after it ships. Do not close #4471's reports as fixed until each ticket below is fixed.
+The one-day move is still open: no fix, no owner. Closing #4471 does not close it. New reports
+where a date moves by one day go to its ticket, not to #4471.
 </Callout>
 
 ## What #4471 holds
@@ -27,33 +28,38 @@ after it ships. Do not close #4471's reports as fixed until each ticket below is
   parser: 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/1',
   hint: 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/2',
   'one-day': 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/3',
+}} outcomes={{
+  parser: { state: 'fixed', why: 'fix(dates): parse dd/mm for eu locales · 5 Oct' },
+  hint: { state: "won't fix", why: 'booking-v3 form retired · 5 Oct' },
 }} />
 
 ## The three problems
 
-### `parser` · the shared parser reads day-first dates month first
+### `parser` · the shared parser reads day-first dates month first · fixed
 
-Every tenant on file writes dates day first. The shared parser reads every date month first, so
-the day and the month swap: "Booked for 2 December. The invite says 12 February." It comes in by
-app, by email, and through booking-v2 forms, whose hint asks for `DD/MM/YYYY`. This is the bug
-#4471's title names, and the one the queued fix is for.
+Every tenant on file writes dates day first. The shared parser read every date month first, so
+the day and the month swapped: "Booked for 2 December. The invite says 12 February." It came in
+by app, by email, and through booking-v2 forms, whose hint asks for `DD/MM/YYYY`. This is the bug
+#4471's title names. Fixed by `fix(dates): parse dd/mm for eu locales`. The fix names EU locales;
+`harbour.dental` (`en-GB`) is day-first too, so check its next invites: day-first is a question
+for the locale, not for a list of countries.
 
-### `hint` · booking-v3 asks for the month first
+### `hint` · booking-v3 asks for the month first · won't fix
 
 booking-v3 prints `MM/DD/YYYY` under its date field. People at day-first tenants on booking-v3
-type the month first, as the hint tells them, and the form reads the date the tenant's way, day
-first. The symptom is the same swap, so subject-line triage merged it into #4471. The parser fix
-does not touch it: the hint has to show the tenant's own order, or the form has to read the order
-its hint asks for. It only comes in through booking-v3 forms.
+typed the month first, as the hint told them, and the form read the date the tenant's way, day
+first. Same swap, so subject-line triage merged it into #4471, but the parser fix does not touch
+it. Won't fix: the booking-v3 form is retired. Reports stop when its last tenants move off it.
 
-### `one-day` · a date moves by one day
+### `one-day` · a date moves by one day · open
 
 Some reports are not a swap at all. "Invite says Tuesday 12 May. Calendar says Monday 11 May."
 "Client in Lisbon got Tuesday. Client in Toronto got Monday. Same meeting." "The invite arrived
-before I made the booking." A day/month swap never moves a date by exactly one day, so the parser
-fix cannot close these. A different day for people in different time zones, and one tenant who
-sees it "only in June", point at a date kept as midnight and converted through another time zone
-or a daylight-saving offset. It needs its own investigation.
+before I made the booking." A day/month swap never moves a date by exactly one day, so neither the
+parser fix nor retiring booking-v3 closes these. A different day for people in different time
+zones, and one tenant who sees it "only in June", point at a date kept as midnight and converted
+through another time zone or a daylight-saving offset. Nobody owns it yet. It needs its own
+investigation.
 
 ## How the reports were counted
 
@@ -72,7 +78,8 @@ or a daylight-saving offset. It needs its own investigation.
 
 ## What this changes for the desk
 
-- #4471 is not one known issue. Triage new date reports to the ticket that matches their cause.
+- #4471 was not one known issue, and closing it did not close the one-day move. Triage new date
+  reports to the ticket that matches their cause.
 - The subject line cannot tell these problems apart: the same subjects ("Wrong day on the
   invite", "Date is wrong", "Month and day swapped?") come in for all three. Subject-line dedupe
   ([decision 0001](/kb/decisions/0001-dedupe-by-subject)) planned for one bug under different

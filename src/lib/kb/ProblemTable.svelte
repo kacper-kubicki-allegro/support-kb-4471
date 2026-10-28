@@ -6,7 +6,16 @@
   import { tenantOf } from '#lib/kb/locales';
 
   // `tickets`: problem → link to the ticket that now owns it.
-  let { ticket, tickets = {} }: { ticket: number; tickets?: Partial<Record<Problem, string>> } = $props();
+  // `outcomes`: problem → what engineering did about it. A problem without one is still open.
+  let {
+    ticket,
+    tickets = {},
+    outcomes = {},
+  }: {
+    ticket: number;
+    tickets?: Partial<Record<Problem, string>>;
+    outcomes?: Partial<Record<Problem, { state: string; why: string }>>;
+  } = $props();
 
   const split = $derived(splitTicket(reports as Report[], ticket, tenantOf, notes.oneDayMove));
   const groups = $derived([...split.filed, ...split.read]);
@@ -31,11 +40,11 @@
 
 <table>
   <thead>
-    <tr><th>problem</th><th>reports</th><th>came in by</th><th>tenants</th><th>seen</th><th>ticket</th></tr>
+    <tr><th>problem</th><th>reports</th><th>came in by</th><th>tenants</th><th>seen</th><th>ticket</th><th>state</th></tr>
   </thead>
   <tbody>
     {#each groups as g (g.problem)}
-      <tr class:orphan={!tickets[g.problem]} class:read={split.read.includes(g)}>
+      <tr class:orphan={!tickets[g.problem] || !outcomes[g.problem]} class:read={split.read.includes(g)}>
         <td><code>{g.problem}</code></td>
         <td>
           <strong>{g.reports.length}</strong>
@@ -46,6 +55,13 @@
         <td class="small">{g.firstSeen} → {g.lastSeen}</td>
         <td>
           {#if tickets[g.problem]}<a href={tickets[g.problem]}>{issue(tickets[g.problem]!)}</a>{:else}no ticket yet{/if}
+        </td>
+        <td>
+          {#if outcomes[g.problem]}
+            <b>{outcomes[g.problem]!.state}</b> <span class="small">{outcomes[g.problem]!.why}</span>
+          {:else}
+            <b class="open">open</b> <span class="small">no fix, no owner</span>
+          {/if}
         </td>
       </tr>
     {/each}
@@ -67,5 +83,6 @@
   .check { color: var(--muted); font-size: 0.85em; }
   .check.off { color: var(--warn); font-weight: 600; }
   .orphan td { background: var(--warn-bg); }
+  .open { color: var(--warn); }
   .read td:first-child { padding-left: 1.25rem; }
 </style>
