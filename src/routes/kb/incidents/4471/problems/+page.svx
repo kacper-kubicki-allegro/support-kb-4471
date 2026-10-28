@@ -4,7 +4,7 @@ title: '#4471 · three problems in one ticket'
 owner: Kacper Kubicki
 status: open
 reviewed: 2026-10-28
-signature: 'Kacper Kubicki'
+signature: 'v1.eyJzdWIiOiIzMTg4IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTMyMjI4NjIsImV4cCI6MTc5MzMwOTI2Mn0.Q8dI1ENzTr0MuyeNi_kiW6UUb8SwcsiR2J---RHEwfg'
 ---
 
 <script>
