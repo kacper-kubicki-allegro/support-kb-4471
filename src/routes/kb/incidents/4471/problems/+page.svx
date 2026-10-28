@@ -1,0 +1,81 @@
+---
+layout: runbook
+title: '#4471 · three problems in one ticket'
+owner: Kacper Kubicki
+status: open
+reviewed: 2026-10-28
+signature: 'Kacper Kubicki'
+---
+
+<script>
+  import ProblemTable from '#lib/kb/ProblemTable.svelte';
+  import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
+</script>
+
+[#4471](/kb/incidents/4471) says: known, one issue, one fix queued. Its reports say three
+problems, with three different fixes. Each problem now has its own ticket.
+
+<Callout kind="warn">
+The queued parser fix closes only the first problem. Reports for the other two will keep coming
+after it ships. Do not close #4471's reports as fixed until each ticket below is fixed.
+</Callout>
+
+## What #4471 holds
+
+<ProblemTable ticket={4471} tickets={{
+  parser: 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/1',
+  hint: 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/2',
+  'one-day': 'https://github.com/kacper-kubicki-allegro/support-kb-4471/issues/3',
+}} />
+
+## The three problems
+
+### `parser` · the shared parser reads day-first dates month first
+
+Every tenant on file writes dates day first. The shared parser reads every date month first, so
+the day and the month swap: "Booked for 2 December. The invite says 12 February." It comes in by
+app, by email, and through booking-v2 forms, whose hint asks for `DD/MM/YYYY`. This is the bug
+#4471's title names, and the one the queued fix is for.
+
+### `hint` · booking-v3 asks for the month first
+
+booking-v3 prints `MM/DD/YYYY` under its date field. People at day-first tenants on booking-v3
+type the month first, as the hint tells them, and the form reads the date the tenant's way, day
+first. The symptom is the same swap, so subject-line triage merged it into #4471. The parser fix
+does not touch it: the hint has to show the tenant's own order, or the form has to read the order
+its hint asks for. It only comes in through booking-v3 forms.
+
+### `one-day` · a date moves by one day
+
+Some reports are not a swap at all. "Invite says Tuesday 12 May. Calendar says Monday 11 May."
+"Client in Lisbon got Tuesday. Client in Toronto got Monday. Same meeting." "The invite arrived
+before I made the booking." A day/month swap never moves a date by exactly one day, so the parser
+fix cannot close these. A different day for people in different time zones, and one tenant who
+sees it "only in June", point at a date kept as midnight and converted through another time zone
+or a daylight-saving offset. It needs its own investigation.
+
+## How the reports were counted
+
+- **One id, one report.** The ticket export comes in overlapping pages, so some reports appear
+  twice. Each id is counted once.
+- **The tenant decides, not the intake tag.** Intake tags a report from the reporter's browser.
+  The cause depends on the tenant's locale and booking form (`causes.ts`, `locales.ts`).
+- **A one-day move is its own problem.** The desk already read these apart (`desk-notes.json`);
+  the incident table still counts them under `parser` and footnotes them. Here they get their
+  own row. Each report body was checked: every other report names a swapped day and month, or
+  is consistent with one.
+- **Every report is in exactly one problem.** The table checks the sum against the ticket.
+- The numbers come from the data at render time (`problems.ts`, `ProblemTable.svelte`), so they
+  stay right when the desk merges more reports.
+
+## What this changes for the desk
+
+- #4471 is not one known issue. Triage new date reports to the ticket that matches their cause.
+- The subject line cannot tell these problems apart: the same subjects ("Wrong day on the
+  invite", "Date is wrong", "Month and day swapped?") come in for all three. Subject-line dedupe
+  ([decision 0001](/kb/decisions/0001-dedupe-by-subject)) planned for one bug under different
+  subjects; here it is different bugs under the same subjects. Splitting needs the tenant and
+  the report body. That needs a new decision record; 0001 stays as it is.
+
+<RenderStamp {signature} />
